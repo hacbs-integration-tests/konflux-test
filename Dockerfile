@@ -15,15 +15,11 @@ RUN dnf install -y jq \
     skopeo \
     tar \
     python3 \
-    csdiff \
     git \
     golang \
     python3-file-magic \
     python3-pip \
-    ShellCheck \
-    csmock-plugin-shellcheck-core \
     libicu \
-    tini && \
     cd .. && rm -rf "bats-core-$BATS_VERSION" && \
     cd / && \
     dnf clean all
