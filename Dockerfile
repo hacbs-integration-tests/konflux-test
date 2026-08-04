@@ -1,13 +1,5 @@
-# Build step for check-payload tool
-FROM registry.access.redhat.com/ubi9/go-toolset:9.8-1785443561 as check-payload-build
 
-#check-payload
 WORKDIR /opt/app-root/src
-ARG CHECK_PAYLOAD_VERSION=0.3.17
-
-RUN tar -xzf /cachi2/output/deps/generic/check-payload-${CHECK_PAYLOAD_VERSION}.tar.gz &&  cd check-payload-${CHECK_PAYLOAD_VERSION} && \
-    CGO_ENABLED=0 go build -ldflags="-X main.Commit=${CHECK_PAYLOAD_VERSION}" -o /opt/app-root/src/check-payload-binary && \
-    chmod +x /opt/app-root/src/check-payload-binary
 
 FROM quay.io/konflux-ci/buildah-task:latest@sha256:4c470b5a153c4acd14bf4f8731b5e36c61d7faafe09c2bf376bb81ce84aa5709 AS buildah-task-image
 FROM registry.redhat.io/openshift4/ose-tools-rhel9@sha256:52da0e4461897bbd0d4ab6f3340e290de5d6b9a702014950b4db6b6abb4880f4 as oc-bin
@@ -19,18 +11,11 @@ FROM registry.access.redhat.com/ubi9/ubi:9.8-1782365825
 # $ conftest --version
 ARG BATS_VERSION=1.8.2
 
-ARG PATH_TO_ART=/cachi2/output/deps/generic
-
 ENV POLICY_PATH="/project"
-
-# Detect architecture for multi-arch support
-ARG TARGETARCH
-ARG TARGETOS
 
 # Build dependency offline to streamline build
 # Import GPG keys for RPM signature verification
-RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release ${PATH_TO_ART}/RPM-GPG-KEY-EPEL-9 && \
-    dnf install -y jq \
+RUN dnf install -y jq \
     skopeo \
     tar \
     python3 \
@@ -43,67 +28,11 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release ${PATH_TO_ART}/RPM-
     csmock-plugin-shellcheck-core \
     libicu \
     tini && \
-    # for sast-unicode-check task
-    tar -xzf ${PATH_TO_ART}/find-unicode-control-v0.1.tar.gz -C /tmp/ && \
-    cp /tmp/find-unicode-control-0.1/find_unicode_control.py /usr/local/bin/ && \
-    cp /tmp/find-unicode-control-0.1/exec-git-find-unicode-control.sh /usr/local/bin/ && \
-    # for picklescan task
-    pip3 install --no-cache-dir --no-index --find-links=${PATH_TO_ART} ${PATH_TO_ART}/picklescan-1.0.4-py3-none-any.whl && \
-    # Use architecture-specific binaries and sbom-utility
-    if [ "$TARGETARCH" = "amd64" ]; then \
-        mkdir sbom-utility && tar -xf ${PATH_TO_ART}/sbom-utility.tar.gz -C sbom-utility && \
-        # Copy v1.40.0 as opm to maintain backwards compatibility with existing tasks
-        # We need multiple versions of opm to support binaryless FBC fragments
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.40.0 /usr/bin/opm && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.26.4 /usr/bin/opm-v1.26.4 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.28.0 /usr/bin/opm-v1.28.0 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.40.0 /usr/bin/opm-v1.40.0 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.44.0 /usr/bin/opm-v1.44.0 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.48.0 /usr/bin/opm-v1.48.0 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.50.0 /usr/bin/opm-v1.50.0 && \
-        cp ${PATH_TO_ART}/linux-amd64-opm-v1.57.0 /usr/bin/opm-v1.57.0 && \
-        cp ${PATH_TO_ART}/umoci.linux.amd64 /usr/bin/umoci && \
-        cp ${PATH_TO_ART}/opa_linux_amd64_static /usr/bin/opa && \
-        cp ${PATH_TO_ART}/snyk-linux /usr/local/bin/snyk && \
-        cp ${PATH_TO_ART}/ec_linux_amd64 /usr/local/bin/ec && \
-        cp ${PATH_TO_ART}/cosign-linux-amd64 /usr/local/bin/cosign && \
-        cp ${PATH_TO_ART}/yq_linux_amd64 /usr/local/bin/yq && chmod +x /usr/local/bin/yq && \
-        tar -xzf ${PATH_TO_ART}/gitleaks_8.30.1_linux_x64.tar.gz -C /usr/bin/ && \
-        tar -xzf ${PATH_TO_ART}/conftest_0.45.0_Linux_x86_64.tar.gz -C /usr/bin/ && \
-        python3 -c "import zipfile; zipfile.ZipFile('${PATH_TO_ART}/codeql-linux64.zip').extractall('/usr/local/bin/')"; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-        mkdir sbom-utility && tar -xf ${PATH_TO_ART}/sbom-utility-arm64.tar.gz -C sbom-utility && \
-        # Copy v1.40.0 as opm to maintain backwards compatibility with existing tasks
-        # We need multiple versions of opm to support binaryless FBC fragments
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.40.0 /usr/bin/opm && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.26.4 /usr/bin/opm-v1.26.4 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.28.0 /usr/bin/opm-v1.28.0 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.40.0 /usr/bin/opm-v1.40.0 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.44.0 /usr/bin/opm-v1.44.0 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.48.0 /usr/bin/opm-v1.48.0 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.50.0 /usr/bin/opm-v1.50.0 && \
-        cp ${PATH_TO_ART}/linux-arm64-opm-v1.57.0 /usr/bin/opm-v1.57.0 && \
-        cp ${PATH_TO_ART}/umoci.linux.arm64 /usr/bin/umoci && \
-        cp ${PATH_TO_ART}/opa_linux_arm64_static /usr/bin/opa && \
-        cp ${PATH_TO_ART}/snyk-linux-arm64 /usr/local/bin/snyk && \
-        cp ${PATH_TO_ART}/ec_linux_arm64 /usr/local/bin/ec && \
-        cp ${PATH_TO_ART}/cosign-linux-arm64 /usr/local/bin/cosign && \
-        cp ${PATH_TO_ART}/yq_linux_arm64 /usr/local/bin/yq && chmod +x /usr/local/bin/yq && \
-        tar -xzf ${PATH_TO_ART}/gitleaks_8.30.1_linux_arm64.tar.gz -C /usr/bin/ && \
-        tar -xzf ${PATH_TO_ART}/conftest_0.45.0_Linux_arm64.tar.gz -C /usr/bin/ && \
-        python3 -c "import zipfile; zipfile.ZipFile('${PATH_TO_ART}/codeql-linux64.zip').extractall('/usr/local/bin/')"; \
-    fi && \
-    chmod +x /usr/bin/opm /usr/bin/opm-v1.26.4 /usr/bin/opm-v1.28.0 /usr/bin/opm-v1.40.0 /usr/bin/opm-v1.44.0 /usr/bin/opm-v1.48.0 /usr/bin/opm-v1.50.0 /usr/bin/opm-v1.57.0 /usr/bin/umoci /usr/bin/opa /usr/local/bin/snyk /usr/local/bin/ec /usr/local/bin/cosign /usr/local/bin/codeql/codeql && \
-    tar -xf ${PATH_TO_ART}/v1.8.2.tar.gz && \
-    cd "bats-core-$BATS_VERSION" && \
-    ./install.sh /usr && \
     cd .. && rm -rf "bats-core-$BATS_VERSION" && \
     cd / && \
     dnf clean all
 
 ENV PATH="${PATH}:/sbom-utility"
-
-COPY --from=check-payload-build /opt/app-root/src/check-payload-binary /usr/bin/check-payload
 
 COPY --from=oc-bin /usr/bin/oc /usr/bin/
 
