@@ -19,7 +19,7 @@ RUN dnf install -y jq \
     golang \
     python3-file-magic \
     python3-pip \
-    libicu \
+    libicu && \
     cd .. && rm -rf "bats-core-$BATS_VERSION" && \
     cd / && \
     dnf clean all
