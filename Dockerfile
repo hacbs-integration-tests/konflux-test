@@ -38,6 +38,6 @@ COPY test/selftest.sh /selftest.sh
 COPY test/utils.sh /utils.sh
 COPY parsers/parse_to_cve_oriented_output.jq /parse_to_cve_oriented_output.jq
 
-LABEL "com.example.vendor"="Konflux Integration Team"
+LABEL "dev.konflux-ci.vendor"="Konflux Integration Team"
 
 ENTRYPOINT ["/usr/bin/bash"]
