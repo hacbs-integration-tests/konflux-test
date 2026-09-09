@@ -1,6 +1,6 @@
 FROM quay.io/konflux-ci/buildah-task:latest@sha256:4c470b5a153c4acd14bf4f8731b5e36c61d7faafe09c2bf376bb81ce84aa5709 AS buildah-task-image
 FROM quay.io/konflux-ci/task-runner:3.1.1@sha256:790df1bb5ea7a9ce4c1717ff341398ff72c99faed1c2e939a3b4a15ff8f4a493 AS appstudio-utils
-FROM registry.access.redhat.com/ubi9/ubi:9.8-1786416589
+FROM registry.access.redhat.com/ubi9/ubi:9.8-1788939089
 
 # Note that the version of OPA used by pr-checks must be updated manually to reflect conftest updates
 # To find the OPA version associated with conftest run the following with the relevant version of conftest:
